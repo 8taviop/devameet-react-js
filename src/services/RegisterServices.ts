@@ -1,4 +1,4 @@
-import { HttpApiServices } from "./HttpApiService";
+import { HttpApiServices } from "./HttpApiServices";
 
 export class RegisterServices extends HttpApiServices {
     register(body:any){

@@ -1,4 +1,4 @@
-import axios, {AxiosInstance} from "axios";
+import axios, {type AxiosInstance} from "axios";
 
 export class HttpApiServices{
     axios: AxiosInstance;
@@ -8,10 +8,10 @@ export class HttpApiServices{
             baseURL: import.meta.env.VITE_PUBLIC_API_URL + '/api'
         });
 
-        this.axios.interceptors.request.use((config: any) => {
+        this.axios.interceptors.request.use((config: any) =>{
             const token = localStorage.getItem('token');
 
-            if(token) {
+            if(token){
                 config.headers.Authorization = 'Bearer ' + token;
             }
 

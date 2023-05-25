@@ -1,4 +1,4 @@
-import { HttpApiServices } from "./HttpApiService";
+import { HttpApiServices } from "./HttpApiServices";
 
 export class UserServices extends HttpApiServices {
     async update(body: any){

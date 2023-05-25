@@ -50,11 +50,15 @@
                 border-color: $primaryColor;
             }
 
-            .objectlarge {
+            .object {
                 height: 90%;
-                width: 90%;
-                object-fit: fill;
-            }
+                object-fit: contain;
+        
+                &.larger {
+                  width: 90%;          
+                  object-fit: fill;
+                }
+              }
 
             .add {
                 display: none;

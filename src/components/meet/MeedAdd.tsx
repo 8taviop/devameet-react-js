@@ -1,10 +1,8 @@
-import { MeetAddEditHeader } from "./MeetAddEditHeader";
-import trashIcon from '../../assets/images/trash_object.svg';
-import rightIcon from '../../assets/images/rotate_right.svg';
-import leftIcon from '../../assets/images/rotate_left.svg';
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MeetServices } from "../../services/MeetServices";
+import { MeetAddEditHeader } from "./MeetAddEditHeader";
+import { MeetObjectsRoom } from "./MeetObjectsRoom";
 
 const meetServices = new MeetServices();
 
@@ -19,7 +17,7 @@ export const MeetAdd = () => {
     }
 
     const isFormInvalid = (!name || name.trim().length < 5
-        || !color || color.trim().length < 4)
+    || !color || color.trim().length < 4)
 
     const doSave = async () => {
         try {
@@ -31,7 +29,7 @@ export const MeetAdd = () => {
             return goBack();
         } catch (e: any) {
             if (e?.response?.data?.message) {
-                console.log('Erro ao efetuar login:', e);
+                console.log('Erro ao efetuar login:', e?.response?.data?.message);
             } else {
                 console.log('Erro ao efetuar login:', e);
             }
@@ -50,42 +48,12 @@ export const MeetAdd = () => {
                 />
                 <div className="form">
                     <span onClick={goBack}>Voltar</span>
-                    <button onClick={doSave}
+                    <button onClick={doSave} 
                         disabled={isFormInvalid}
                         className={isFormInvalid ? 'disabled' : ''}>Salvar</button>
                 </div>
             </div>
-            <div className="container-objects">
-                <div className="center">
-                    <div className="grid">
-                        <div className="line row one" />
-                        <div className="line row two" />
-                        <div className="line row three" />
-                        <div className="line row four" />
-                        <div className="line row five" />
-                        <div className="line row six" />
-                        <div className="line row seven" />
-                        <div className="line column one" />
-                        <div className="line column two" />
-                        <div className="line column three" />
-                        <div className="line column four" />
-                        <div className="line column five" />
-                        <div className="line column six" />
-                        <div className="line column seven" />
-                    </div>
-                    <div className="actions">
-                        <div>
-                            <img src={trashIcon} />
-                        </div>
-                        <div>
-                            <img src={rightIcon} />
-                        </div>
-                        <div>
-                            <img src={leftIcon} />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <MeetObjectsRoom />
         </div>
     );
 }
