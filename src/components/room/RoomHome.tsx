@@ -50,6 +50,10 @@ export const RoomHome = () => {
 
     }
 
+    const copyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+    }
+
     return (
         <div className="container-principal">
             <div className="container-room">
@@ -58,7 +62,7 @@ export const RoomHome = () => {
                         ?
                         <>
                             <div className="resume">
-                                <div>
+                                <div onClick={copyLink}>
                                     <span><strong>Reunião</strong> {link}</span>
                                     <img src={copyIcon} />
                                 </div>
