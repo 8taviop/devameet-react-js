@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { RoomObjects } from "./RoomObjects";
 import { RoomServices } from "../../services/RoomServices";
 import { createPeerConnectionContext } from "../../services/WebSocketServices";
-
 import iconUp from '../../assets/images/chevron_up.svg';
 import iconLeft from '../../assets/images/chevron_left.svg';
 import iconRight from '../../assets/images/chevron_right.svg';
@@ -20,21 +19,33 @@ let userMediaStream: any;
 export const RoomHome = () => {
 
     const navigate = useNavigate();
-    const [name, setName] = useState([]);
-    const [color, setColor] = useState([]);
     const [objects, setObjects] = useState([]);
     const [connectedUsers, setConnectedUsers] = useState([]);
     const [me, setMe] = useState<any>({});
+    const [color, setColor] = useState("");
+    const [name, setName] = useState("");
     const [showModal, setShowModal] = useState(false);
-
+    
+    const [cantWalk, setCantWalk] = useState<any>([]);
     const { link } = useParams();
-    const userId = localStorage.getItem('id') || '';
+    const userId = localStorage.getItem("id") || "";
     const mobile = window.innerWidth <= 992;
+    
+    useEffect(() => {
+        getRoom();
+    }, []);
+    useEffect(() => {
+        document.addEventListener("keyup", (event: any) => doMovement(event));
+
+        return () => {
+            document.removeEventListener("keyup", (event: any) => doMovement(event));
+        };
+    }, [cantWalk]);
 
     const getRoom = async () => {
         try {
             if (!link) {
-                return navigate('/');
+                return navigate("/");
             }
 
             const result = await roomServices.getRoomByLink(link);
@@ -49,7 +60,7 @@ export const RoomHome = () => {
             setColor(color);
 
             const newObjects = objects.map((o: any) => {
-                return { ...o, type: o?.name.split('_')[0] }
+                return { ...o, type: o?.name?.split("_")[0] };
             });
 
             setObjects(newObjects);
@@ -60,75 +71,92 @@ export const RoomHome = () => {
                     height: { min: 400, ideal: 1080 },
                     aspectRatio: { ideal: 1.7777 },
                 },
-                audio: true
+                audio: true,
             });
-
-            if (document.getElementById('localVideoRef')) {
-                const videoRef: any = document.getElementById('localVideoRef');
+            if (document.getElementById("localVideoRef")) {
+                const videoRef: any = document.getElementById("localVideoRef");
                 videoRef.srcObject = userMediaStream;
             }
-        } catch (e) {
-            console.log('Ocorreu erro ao buscar dados da sala:', e)
+        } catch (error) {
+            console.log("Ocorreu erro ao buscar dados da sala: ", error);
         }
-    }
+    };
 
-    useEffect(() => {
-        getRoom();
-    }, [])
+    const cantWalkOver = () => {
+        let coordinates: any[] = [];
 
-    useEffect(() => {
-        document.addEventListener('keyup', (event: any) => doMovement(event));
+        objects.map((o: any) => {
+            if (o.canWalkOver === false) {
+                let width = o.width;
+                let height = o.height;
 
-        return () => {
-            document.removeEventListener('keyup', (event: any) => doMovement(event));
-        }
-    }, [])
+                let y = o.y;
+                let x = o.x;
+                for (width; width > 0; width--) {
+                    for (height; height > 0; height--) {
+                        coordinates.push([x, y]);
+                        y++;
+                    }
+                    y = o.y;
+                    height = o.height;
+                    x++;
+                }
+            }
+        });
+        setCantWalk([coordinates]);
+    };
 
     const enterRoom = () => {
         if (!userMediaStream) {
             return setShowModal(true);
         }
-
         if (!link || !userId) {
-            return navigate('/');
+            return navigate("/");
         }
-
         wsServices.joinRoom(link, userId);
         wsServices.onCallMade();
         wsServices.onUpdateUserList(async (users: any) => {
             if (users) {
                 setConnectedUsers(users);
-                localStorage.setItem('connectedUsers', JSON.stringify(users));
+                localStorage.setItem("connectedUsers", JSON.stringify(users));
 
                 const me = users.find((u: any) => u.user === userId);
                 if (me) {
                     setMe(me);
-                    localStorage.setItem('me', JSON.stringify(me));
+                    localStorage.setItem("me", JSON.stringify(me));
                 }
 
-                const usersWithoutMe = users.filter((u: any) => u.user !== userId);
+                const usersWithoutMe = users.filter(
+                    (user: any) => user.user !== userId
+                );
+
                 for (const user of usersWithoutMe) {
-                    wsServices.addPeerConnection(user.clientId, userMediaStream, (_stream: any) => {
-                        if (document.getElementById(user.clientId)) {
-                            const videoRef: any = document.getElementById(user.clientId);
-                            videoRef.srcObject = _stream;
+                    wsServices.addPeerConnection(
+                        user.clientId,
+                        userMediaStream,
+                        (_stream: any) => {
+                            if (document.getElementById(user.clientId)) {
+                                const videoRef: any = document.getElementById(user.clientId);
+                                videoRef.srcObject = _stream;
+                            }
                         }
-                    });
+                    );
                 }
             }
         });
-
         wsServices.onRemoveUser((socketId: any) => {
-            const connectedStr = localStorage.gettItem('connectedUsers') || '';
+            const connectedStr = localStorage.getItem("connectedUsers") || "";
             const connectedUsers = JSON.parse(connectedStr);
-            const filtered = connectedUsers?.filter((u: any) => u.clientId !== socketId);
+
+            const filtered = connectedUsers?.filter(
+                (u: any) => u.clientId !== socketId
+            );
             setConnectedUsers(filtered);
             wsServices.removePeerConnection(socketId);
         });
 
         wsServices.onAddUser((user: any) => {
-            console.log('onAddUser', user);
-
+            console.log("onAddUser", user);
             wsServices.addPeerConnection(user, userMediaStream, (_stream: any) => {
                 if (document.getElementById(user)) {
                     const videoRef: any = document.getElementById(user);
@@ -140,146 +168,151 @@ export const RoomHome = () => {
         });
 
         wsServices.onAnswerMade((socket: any) => wsServices.callUser(socket));
-    }
+        cantWalkOver();
+    };
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+    };
 
     const toggleMute = () => {
         const payload = {
             userId,
             link,
-            muted: !me.muted
-        }
+            muted: !me.muted,
+        };
 
         wsServices.updateUserMute(payload);
-
-    }
+    };
 
     const doMovement = (event: any) => {
-        const meStr = localStorage.getItem('me') || '';
+        const meStr = localStorage.getItem("me") || "";
         const user = JSON.parse(meStr);
 
         if (event && user) {
             const payload = {
                 userId,
-                link
+                link,
             } as any;
 
             switch (event.key) {
-                case 'ArrowUp':
-                    payload.x = user.x;
-                    payload.orientation = 'back';
-                    if (user.orientation === 'back') {
-                        payload.y = user.y > 1 ? user.y - 1 : 1;
-                    } else {
-                        payload.y = user.y;
-                    }
-                    break;
-                case 'ArrowDown':
-                    payload.x = user.x;
-                    payload.orientation = 'front';
-                    if (user.orientation === 'front') {
-                        payload.y = user.y < 7 ? user.y + 1 : 7;
-                    } else {
-                        payload.y = user.y;
-                    }
-                    break;
-                case 'ArrowLeft':
-                    payload.y = user.y;
-                    payload.orientation = 'left';
-                    if (user.orientation === 'left') {
-                        payload.x = user.x > 0 ? user.x - 1 : 0;
-                    } else {
+                case "ArrowUp": {
+                    if (cantWalk[0]) {
                         payload.x = user.x;
+                        payload.orientation = "back";
+                        if (user.orientation === "back") {
+                            payload.y = user.y > 1 ? user.y - 1 : 1;
+                        } else {
+                            payload.y = user.y;
+                        }
+                        cantWalk[0].map(((o: any) => {
+                            if (o[0] === payload.x && o[1] === payload.y) {
+                                payload.x = user.x;
+                                payload.y = user.y
+                            }
+                        }))
                     }
                     break;
-                case 'ArrowRight':
-                    payload.y = user.y;
-                    payload.orientation = 'right';
-                    if (user.orientation === 'right') {
-                        payload.x = user.x < 7 ? user.x + 1 : 7;
-                    } else {
+
+                }
+                case "ArrowDown": {
+                    if (cantWalk[0]) {
                         payload.x = user.x;
+                        payload.orientation = "front";
+                        if (user.orientation === "front") {
+                            payload.y = user.y < 7 ? user.y + 1 : 7;
+                        } else {
+                            payload.y = user.y;
+                        }
+                        cantWalk[0].map(((o: any) => {
+                            if (o[0] === payload.x && o[1] === payload.y) {
+                                payload.x = user.x;
+                                payload.y = user.y
+                            }
+                        }))
                     }
                     break;
-                default: break;
+                }
+                case "ArrowLeft": {
+                    if (cantWalk[0]) {
+                        payload.y = user.y;
+                        payload.orientation = "left";
+                        if (user.orientation === "left") {
+                            payload.x = user.x > 0 ? user.x - 1 : 0;
+                        } else {
+                            payload.x = user.x;
+                        }
+                        console.log(cantWalk[0])
+                        cantWalk[0].map(((o: any) => {
+                            if (o[0] === payload.x && o[1] === payload.y) {
+                                payload.x = user.x;
+                                payload.y = user.y
+                            }
+                        }))
+                    }
+                    break;
+                }
+                case "ArrowRight": {
+                    payload.y = user.y;
+                    if (cantWalk[0]) {
+                        payload.orientation = "right";
+                        if (user.orientation === "right") {
+                            payload.x = user.x < 7 ? user.x + 1 : 7;
+                        } else {
+                            payload.x = user.x;
+                        }
+                        cantWalk[0].map(((o: any) => {
+                            if (o[0] === payload.x && o[1] === payload.y) {
+                                payload.x = user.x;
+                                payload.y = user.y
+                            }
+                        }))
+                    }
+                    break;
+                }
+                default:
+                    break;
             }
 
             if (payload.x >= 0 && payload.y >= 0 && payload.orientation) {
                 wsServices.updateUserMovement(payload);
             }
         }
-    }
-
-    const copyLink = () => {
-        navigator.clipboard.writeText(window.location.href);
-    }
+    };
 
     const getUsersWithoutMe = () => {
-        return connectedUsers.filter((u: any) => u.user !== userId);
-    }
+        return connectedUsers.filter((user: any) => user.user !== userId);
+    };
+
+    const getName = (user: any) => {
+        if (user?.name) {
+            return user.name.split(" ")[0];
+        }
+        return "";
+    };
+
+    const getMutedClass = (user: any) => {
+        if (user?.muted) {
+            return "muted";
+        }
+        return "";
+    };
 
     return (
         <>
-            <div className="container-principal">
-                <div className="container-room">
-                    {
-                        objects?.length > 0
-                            ?
-                            <>
-                                <div className="resume">
-                                    <div onClick={copyLink}>
-                                        <span><strong>Reunião</strong> {link}</span>
-                                        <img src={copyIcon} />
-                                    </div>
-                                    <p style={{ color }}>{name}</p>
-                                    <audio id='localVideoRef' playsInline autoPlay muted />
-                                    {getUsersWithoutMe()?.map((user: any) =>
-                                        <audio key={user.clientId} id={user.clientId}
-                                            playsInline autoPlay muted={user?.muted} />
-                                    )}
-                                </div>
-                                <RoomObjects
-                                    objects={objects}
-                                    enterRoom={enterRoom}
-                                    connectedUsers={connectedUsers}
-                                    me={me}
-                                    toggleMute={toggleMute}
-                                />
-                                {mobile && me?.user &&
-                                    <div className="movement">
-                                        <div className="button" onClick={() => doMovement({ key: 'ArrowUp' })}>
-                                            <img src={iconUp} alt="Andar para cima" />
-                                        </div>
-                                        <div className="line">
-                                            <div className="button" onClick={() => doMovement({ key: 'ArrowLeft' })}>
-                                                <img src={iconLeft} alt="Andar para esquerda" />
-                                            </div>
-                                            <div className="button" onClick={() => doMovement({ key: 'ArrowDown' })}>
-                                                <img src={iconDown} alt="Andar para baixo" />
-                                            </div>
-                                            <div className="button" onClick={() => doMovement({ key: 'ArrowRight' })}>
-                                                <img src={iconRight} alt="Andar para direita" />
-                                            </div>
-                                        </div>
-                                    </div>}
-
-                            </>
-                            :
-                            <div className="empty">
-                                <img src={emptyIcon} />
-                                <p>Reunião não encontrada :/</p>
-                            </div>
-                    }
-                </div>
-            </div>
             <Modal
                 show={showModal}
                 onHide={() => setShowModal(false)}
-                className="container-modal">
+                className="container-modal"
+            >
                 <Modal.Body>
                     <div className="content">
                         <div className="container">
-                            <p>Aviso!</p>
-                            <span>Habilite a permissão de audio e vídeo para participar das reuniões.</span>
+                            <span>Aviso!</span>
+                            <p>
+                                Habilite a permissão de áudio e vídeo para participar das
+                                reuniões
+                            </p>
                         </div>
                         <div className="actions">
                             <button onClick={() => setShowModal(false)}>Ok</button>
@@ -287,6 +320,107 @@ export const RoomHome = () => {
                     </div>
                 </Modal.Body>
             </Modal>
+            <div className="container-principal">
+                <div className="container-room">
+                    {objects && objects.length > 0 ? (
+                        <>
+                            <div className="resume">
+                                <div
+                                    className="streams"
+                                >
+                                    {getUsersWithoutMe()?.map((user: any) => (
+                                        <>
+                                            {mobile ? (
+                                                <audio
+                                                    key={user.clientId}
+                                                    id={user.clientId}
+                                                    playsInline
+                                                    autoPlay
+                                                    muted={user?.muted}
+                                                />
+                                            ) : (
+                                                <div className="otherUsersStreams">
+                                                    <div className={"name " + getMutedClass(user)}>
+                                                        <span className={getMutedClass(user)}>
+                                                            {getName(user)}
+                                                        </span>
+                                                    </div>
+                                                    <video
+                                                        key={user.clientId}
+                                                        id={user.clientId}
+                                                        playsInline
+                                                        autoPlay
+                                                        muted={user?.muted}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    ))}
+                                </div>
+                                {mobile ? (
+                                    <audio id="localVideoRef" playsInline autoPlay muted />
+                                ) : (
+                                    <div className="meStream">
+                                        <div className={"name " + getMutedClass(me)}>
+                                            <span className={getMutedClass(me)}>{getName(me)}</span>
+                                        </div>
+                                        <video id="localVideoRef" playsInline autoPlay muted />
+                                    </div>
+                                )}
+                                <div onClick={copyLink}>
+                                    <span>
+                                        <strong>Reunião</strong> {link}
+                                    </span>
+                                    <img src={copyIcon} alt="Copie o link da sala" />
+                                </div>
+                                <p style={{ color: color }}>{name}</p>
+                            </div>
+                            <RoomObjects
+                                connectedUsers={connectedUsers}
+                                me={me}
+                                objects={objects}
+                                enterRoom={enterRoom}
+                                toggleMute={toggleMute}
+                            />
+                            {mobile && me?.user && (
+                                <div className="movement">
+                                    <div
+                                        className="button"
+                                        onClick={() => doMovement({ key: 'ArrowUp' })}
+                                    >
+                                        <img src={iconUp} alt="andar para cima" />
+                                    </div>
+                                    <div className="line">
+                                        <div
+                                            className="button"
+                                            onClick={() => doMovement({ key: 'ArrowLeft' })}
+                                        >
+                                            <img src={iconLeft} alt="andar para esquerda" />
+                                        </div>
+                                        <div
+                                            className="button"
+                                            onClick={() => doMovement({ key: 'ArrowDown' })}
+                                        >
+                                            <img src={iconDown} alt="andar para baixo" />
+                                        </div>
+                                        <div
+                                            className="button"
+                                            onClick={() => doMovement({ key: 'ArrowRight' })}
+                                        >
+                                            <img src={iconRight} alt="andar para direita" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="empty">
+                            <img src={emptyIcon} />
+                            <p>Reunião não encontrada :/</p>
+                        </div>
+                    )}
+                </div>
+            </div>
         </>
     );
-}
+};

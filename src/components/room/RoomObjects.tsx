@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import linkIcon from '../../assets/images/link_preview.svg';
 import micOnIcon from '../../assets/images/mic_on.svg';
 import micOffIcon from '../../assets/images/mic_off.svg';
@@ -6,11 +6,11 @@ import micOffIcon from '../../assets/images/mic_off.svg';
 
 type RoomObjectsProps = {
     objects: Array<any>,
-    connectedUsers: Array<any>,
-    me: any,
+    connectedUsers?: Array<any>,
+    me?: any,
     enterRoom(): void,
-    toggleMute():void
-}
+    toggleMute?():void
+};
 
 export const RoomObjects: React.FC<RoomObjectsProps> = ({ objects, enterRoom, connectedUsers, me, toggleMute }) => {
 

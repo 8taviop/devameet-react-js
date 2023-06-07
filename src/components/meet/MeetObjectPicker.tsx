@@ -9,7 +9,7 @@ type MeetObjectPickerType = {
     label: string,
     asset: any,
     selected: string,
-    setObject(s:any): void
+    setObject(s: any): void
 };
 
 export const MeetObjectPicker: React.FC<MeetObjectPickerType> = ({ image, label, asset, selected, setObject }) => {
@@ -24,19 +24,22 @@ export const MeetObjectPicker: React.FC<MeetObjectPickerType> = ({ image, label,
         }
     }
 
-    const selectObject = (o: string) => {
-        
-        const objectFinal= {
-            name: o,
+    const selectObject = (o: any) => {
+
+        const objectFinal = {
+            name: o.name,
             x: asset.defaultXPosition,
             y: asset.defaultYPosition,
+            width: o.width,
+            height: o.height,
             zindex: asset.defaultZIndex,
             orientation: asset.canRotate ? 'front' : '',
             type: asset.path,
             flexStart: asset.flexStart,
             selectMultiple: asset.selectMultiple,
+            canWalkOver: asset.canWalkOver
         }
-        
+
         setObject(objectFinal);
     }
 
@@ -52,16 +55,16 @@ export const MeetObjectPicker: React.FC<MeetObjectPickerType> = ({ image, label,
             </div>
             {show && <div className='objects'>
                 {asset?.objects?.map((o: any) =>
-                    <div key={o} className={o === selected ? 'selected' : ''} onClick={() => selectObject(o)}>
-                        <img src={getImageFromObject(o)}
+                    <div key={o.name} className={o.name === selected ? 'selected' : ''} onClick={() => selectObject(o)}>
+                        <img src={getImageFromObject(o.name)}
                             className={
                                 "object " +
                                 (asset.path === "wall" ||
-                                asset.path === "floor" ||
-                                asset.path === "couch"
-                                  ? "larger"
-                                  : "")
-                              }
+                                    asset.path === "floor" ||
+                                    asset.path === "couch"
+                                    ? "larger"
+                                    : "")
+                            }
                         />
                         <img src={addIcon} className='add' />
                     </div>

@@ -56,6 +56,7 @@ export const MeetEdit = () => {
             });
             setObjects(newObjects);
         }
+        console.log(objects)
     }
 
     useEffect(() => {
